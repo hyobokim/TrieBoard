@@ -1,4 +1,6 @@
 import React, {Component, useEffect, useRef, useState} from "react";
+import TypeInput from "../TypeInput";
+import Trie from "../prefixTree";
 import * as d3 from "d3";
 
 const ForceGraph = () => {
@@ -9,13 +11,15 @@ const ForceGraph = () => {
         text_size = "1em";
 
 
-    const [counter, setCounter] = useState(4);
+    const prefixTree = new Trie();
     const [data, setData] = useState(
         {
-            "nodes": [{"id": "TrieBoard", "group": 1}],
+            "nodes": [{"id": "", "text": "TrieBoard", "group": ""}],
             "links": []
         }
         );
+
+    const [trie, setTrie] = useState(new Trie());
 
     const ref = useRef();
     
@@ -44,12 +48,11 @@ const ForceGraph = () => {
         .append("circle")
         .attr("r", node_radius)
         .style("fill", "#69b3a2");
-        // .attr("transform", d => 'translate("+[width/2,height/2]+")');
         
         // add the text
         const nodeText = nodeTextGroup
         .append("text")
-        .text(d => d.id)
+        .text(d => d.text)
         .attr("font-size", text_size)
         .style("text-anchor", "middle");
 
@@ -75,9 +78,9 @@ const ForceGraph = () => {
 
         const simulation = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id))
-        .force("charge", d3.forceManyBody())
+        .force("charge", d3.forceManyBody().strength(-200))
         .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("collide", d3.forceCollide(50))
+        .force("collide", d3.forceCollide(100))
         .on("tick", ticked);
 
 
@@ -102,18 +105,14 @@ const ForceGraph = () => {
             nodeText
             .attr("x", d => d.x)
             .attr("y", d => d.y);
-                // .attr("cx", d => d.x)
-                // .attr("cy", d => d.y);
-
-            // nodeTextGroup.attr('transform', (d) => `translate(${d.x},${d.y})`);
-            // link.attr('x1', (d) => d.source.x).attr('y1', (d) => d.source.y).attr('x2', (d) => d.target.x).attr('y2', (d) => d.target.y)
         };
 
         function dragstarted(event) {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
+            if (!event.active) simulation.alphaTarget(0.1).restart();
             event.fx = event.subject.x;
             event.fy = event.subject.y;
         };
+        
         // // Update the subject (dragged node) position during drag.
         function dragged(event) {
             event.subject.fx = event.x;
@@ -127,8 +126,8 @@ const ForceGraph = () => {
             event.subject.fx = null;
             event.subject.fy = null;
         };
-        simulation.alpha(0.05).restart();
 
+        simulation.alpha(0.05).restart();
 
         const zoomHandler = d3.zoom().on('zoom', (event) => {
             // Apply transformations to the entire graph (nodes, links, etc.)
@@ -145,26 +144,38 @@ const ForceGraph = () => {
         
     }, [data]);
 
-    function addNode(e) {
-        const letters = /^[A-Za-z]+$/;
-        if (e.key.match(letters)) {
+    function addCurrentWordToGraph(word) {
+        const lastLetter = word.slice(-1);
+        const nodeCreated = trie.insert(word);
+        
+        if (nodeCreated) {
+            // If a new node was created, means this didn't exist originally in the tree. 
+            // Add a node to the data set so it shows up on the Force Graph 
             setData(
                 {
-                    "nodes": [...data.nodes, {"id": e.key, "group": 1}], 
-                    "links": [...data.links, {"source": e.key, "target": "TrieBoard"}]}
+                    "nodes": [...data.nodes, {"id": word, "text": lastLetter, "group": word}], 
+                    "links": [...data.links, {"source": word, "target": word.slice(0, -1)}]}
                 ); 
-            setCounter(counter + 1);
+        }
+
+        setTrie(new Trie(trie.root));
+    }
+
+    function handleInput(e) {
+        const letters = /^[A-Za-z]+$/;
+
+        const lastLetter = e.target.value.slice(-1);
+
+        if (lastLetter.match(letters)) {
+            addCurrentWordToGraph(e.target.value);
         } else {
             return;
         }
     }
-    
 
     return <div>
         <svg ref={ref}/>
-        <span>
-        <input type="text" onKeyUp={(e) => addNode(e)}/>
-        </span>
+        <TypeInput handler={handleInput}></TypeInput>
     </div>
 }
 

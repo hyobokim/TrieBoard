@@ -1,12 +1,12 @@
 import logo from './logo.svg';
 import './App.css';
-import ForceGraph from './Components';
+import ForceGraph from './Components/ForceGraph';
 import * as d3 from "d3"
 
 function App() {
 
   return (
-    <div className="App" style={{"width": "100vw", "heighgt": "100vh"}}>
+    <div className="App" style={{"width": "100vw", "height": "100vh"}}>
       <ForceGraph/>
       {/* <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
