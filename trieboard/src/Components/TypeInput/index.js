@@ -4,7 +4,11 @@ const TypeInput = (props) => {
     const [inputValue, setInputValue] = useState('');
 
     const updateInput = (e) => {
-        setInputValue(e.target.value);
+        const letters = /^[A-Za-z]+$/;
+
+        if (e.target.value.match(letters) || e.target.value === "") {
+            setInputValue(e.target.value);
+        }
 
         // Reset value when space is clicked
         if (e.target.value.slice(-1) === ' ') {
