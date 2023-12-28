@@ -189,19 +189,17 @@ const ForceGraph = () => {
     function finalizeWord(word) {
         const nodeCreated = trie.insert(word);
 
-        if (nodeCreated) {
-            let lastNode = data["nodes"].slice(-1)[0];
-            lastNode.endOfWord = true;
-            lastNode.current = false;
+        let lastNode = data["nodes"].slice(-1)[0];
+        lastNode.endOfWord = true;
+        lastNode.current = false;
 
-            setData(
-                {
-                    "nodes": [...data.nodes.slice(0, -1), lastNode], 
-                    "links": [...data.links]}
-                ); 
+        setData(
+            {
+                "nodes": [...data.nodes.slice(0, -1), lastNode], 
+                "links": [...data.links]}
+            ); 
 
-            setTrie(new Trie(trie.root)); // update the trie 
-        }
+        setTrie(new Trie(trie.root)); // update the trie 
     }
 
     function handleInput(e) {
