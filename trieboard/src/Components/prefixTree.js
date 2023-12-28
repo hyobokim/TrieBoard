@@ -57,4 +57,22 @@ export default class Trie {
 
         return curNode.isEndOfWord;
     }
+
+    /**
+     * Searches if the incomplete word is in the trie. Does not check if it is a complete word, just checks if the sequence exists
+     * @param {String} word 
+     */
+    hasSequence(word) {
+        let curNode = this.root;
+
+        for (const letter of word) {
+            if (!(letter in curNode.children)) {
+                return false;
+            }
+
+            curNode = curNode.children[letter];
+        }
+
+        return true;
+    }
 }
