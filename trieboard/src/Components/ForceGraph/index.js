@@ -24,49 +24,37 @@ const ForceGraph = () => {
         const nodes = data.nodes;
         const links = data.links;
 
-        console.log(nodes);
-        console.log(links);
-
         const svg = d3.select(ref.current).attr("width", width).attr("height", height);
+        const nodeTextGroup = svg.selectAll("g");
 
         // Keep a copy of the previous zoom state to preserve zoom level
         const prevZoom = d3.zoomTransform(svg.node());
 
-        svg.selectAll("g").remove();
-        let nodeTextGroup = svg.selectAll("g").data(nodes);
+        const enteredNodeTextGroup = nodeTextGroup.data(nodes, d => d.id).enter().append("g")
         
-        nodeTextGroup.exit()
-        .remove();
-
-        nodeTextGroup = nodeTextGroup.enter()
-        .append("g");
 
         // add the circle
-        const node = nodeTextGroup
+        const node = enteredNodeTextGroup
         .append("circle")
-        .attr("r", node_radius)
-        .style("fill",  d => d.current ? "#FFFF00" : !d.endOfWord ? "#69b3a2" : "#FFA500");
-        //     if (d.current) {
-        //         "#FFFF00"
-        //     } else {
-        //         "#69b3a2"
-        //     }
-        // });
+
+        node
+        .transition()
+        .attr("r", node_radius);
         
         // add the text
-        const nodeText = nodeTextGroup
+        const nodeText = enteredNodeTextGroup
         .append("text")
-        .text(d => d.text)
+        .text(d => d.id)
         .attr("font-size", text_size)
         .style("text-anchor", "middle");
 
+        // Style the circles  
+        svg.selectAll("g").select("circle")
+        .style("fill",  d => d.current ? "#FFFF00" : !d.endOfWord ? "#69b3a2" : "#FFA500");
         node.append("title").text(d => d.id);
 
         let link = svg.selectAll("line")
         .data(links)
-        
-        link.exit()
-        .remove();
 
         link = link
         .enter()
@@ -87,17 +75,17 @@ const ForceGraph = () => {
             // simulation
             // .force("center", d3.forceCenter().strength(0))
 
-            link
+            svg.selectAll("line")
                 .attr("x1", d => d.source.x)
                 .attr("y1", d => d.source.y)
                 .attr("x2", d => d.target.x)
                 .attr("y2", d => d.target.y);
 
-            node
+            svg.selectAll("g").select("circle")
             .attr("cx", d => d.x)
             .attr("cy", d => d.y);
 
-            nodeText
+            svg.selectAll("g").select("text")
             .attr("x", d => d.x)
             .attr("y", d => d.y);
         };
@@ -131,7 +119,7 @@ const ForceGraph = () => {
 
         const zoomHandler = d3.zoom().on('zoom', (event) => {
             // Apply transformations to the entire graph (nodes, links, etc.)
-            nodeTextGroup.attr('transform', event.transform);
+            svg.selectAll("g").attr('transform', event.transform);
             link.attr('transform', event.transform);
           });
         
@@ -174,10 +162,9 @@ const ForceGraph = () => {
             setData(
                 {
                     "nodes": [...data.nodes.filter(n => (n.id !== word)), wordNode], 
-                    "links": [...data.links, {"source": word, "target": word.slice(0, -1)}]
+                    "links": data.links
                 }
             )
-            console.log(wordNode);
         }
     }
 
@@ -196,7 +183,7 @@ const ForceGraph = () => {
         setData(
             {
                 "nodes": [...data.nodes.slice(0, -1), lastNode], 
-                "links": [...data.links]}
+                "links": data.links}
             ); 
 
         setTrie(new Trie(trie.root)); // update the trie 
