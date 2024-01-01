@@ -7,12 +7,42 @@ const ForceGraph = () => {
     var margin = {top: 0, right: 5, bottom: 40, left: 100},
         width = window.innerWidth - margin.left - margin.right,
         height = window.innerHeight -margin.top - margin.bottom,
-        node_radius = 40,
-        text_size = "1em";
-
+        node_radius = 30,
+        text_size = "2em";
+    
+    const letterColors = {
+        '': '#008080',
+        'a': '#FF0000',
+        'b': "#FF7F00",
+        'c': '#FFD400',
+        'd': "#FFFF00",
+        'e': '#BFFF00',
+        'f': "#6AFF00",
+        'g': '#00EAFF',
+        'h': "#0095FF",
+        'i': '#0040FF',
+        'j': "#AA00FF",
+        'k': '#FF00AA',
+        'l': "#EDB9B9",
+        'm': '#ff00ff',
+        'n': "#B9EDE0",  // these next two are very similar, maybe change?
+        'o': '#B9D7ED',
+        'p': "#DCB9ED",
+        'q': '#8F2323',
+        'r': "#8F6A23",
+        's': '#4F8F23',
+        't': "#23628F",
+        'u': '#6B238F',
+        'v': "#000000",
+        'w': '#737373',
+        'x': "#CCCCCC",
+        'y': '#E7E9B9',
+        'z': "#8b4513",
+    }
     const [data, setData] = useState(
+        // Data is ordered sequentially, i.e. most recent data is at the end of list 
         {
-            "nodes": [{"id": "", "text": "TrieBoard", "group": "", "current": false, "endOfWord": false}],
+            "nodes": [{"id": "", "text": "", "group": "", "current": false, "endOfWord": false}],
             "links": []
         }
         );
@@ -32,10 +62,12 @@ const ForceGraph = () => {
 
         const enteredNodeTextGroup = nodeTextGroup.data(nodes, d => d.id).enter().append("g")
         
-
         // add the circle
         const node = enteredNodeTextGroup
         .append("circle")
+        .attr("cx", width / 2)
+        .attr("cy", height / 2)
+        .attr("id", d => d.id);
 
         node
         .transition()
@@ -44,13 +76,17 @@ const ForceGraph = () => {
         // add the text
         const nodeText = enteredNodeTextGroup
         .append("text")
-        .text(d => d.id)
+        .text(d => d.text)
         .attr("font-size", text_size)
-        .style("text-anchor", "middle");
+        .style("dominant-baseline", "middle") // vertical alignment
+        .style("text-anchor", "middle")       // horizontal alignment
 
+        const circleSelector = data.nodes.length > 2 ? `#${data.nodes.slice(-1)[0].id}, #${data.nodes.slice(-2)[0].id}` : "circle"
         // Style the circles  
-        svg.selectAll("g").select("circle")
-        .style("fill",  d => d.current ? "#FFFF00" : !d.endOfWord ? "#69b3a2" : "#FFA500");
+        svg.selectAll(circleSelector)
+        .style("fill",  d => letterColors[d.id.slice(0, 1)])
+        .style("stroke", d => d.current ? "yellow" : "black")
+        .style("stroke-width", "5");
         node.append("title").text(d => d.id);
 
         let link = svg.selectAll("line")
@@ -66,26 +102,33 @@ const ForceGraph = () => {
         const simulation = d3.forceSimulation(nodes)  // S3 simulation to apply forces between nodes in the graph 
         .force("link", d3.forceLink(links).id(d => d.id))
         .force("charge", d3.forceManyBody().strength(-200))
-        .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("collide", d3.forceCollide(100))
+        // .force("x", d3.forceX())
+        // .force("y", d3.forceY())
+        // .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collide", d3.forceCollide(50))
         .on("tick", ticked); 
 
-        function ticked() {
-            // Allow user to move around nodes wherever they want 
-            // simulation
+        if (data.nodes.length === 1) {
+            simulation.force("center", d3.forceCenter(width / 2, height / 2));
+        } else {
+            simulation
             // .force("center", d3.forceCenter().strength(0))
+            .force("x", d3.forceX(width / 2))
+            .force("y", d3.forceY(height / 2));
+        }
 
+        function ticked() {
             svg.selectAll("line")
                 .attr("x1", d => d.source.x)
                 .attr("y1", d => d.source.y)
                 .attr("x2", d => d.target.x)
                 .attr("y2", d => d.target.y);
 
-            svg.selectAll("g").select("circle")
+            svg.selectAll("circle")
             .attr("cx", d => d.x)
             .attr("cy", d => d.y);
 
-            svg.selectAll("g").select("text")
+            svg.selectAll("text")
             .attr("x", d => d.x)
             .attr("y", d => d.y);
         };
@@ -115,7 +158,7 @@ const ForceGraph = () => {
             event.subject.fy = null;
         };
 
-        simulation.alpha(0.05).restart();
+        simulation.alpha(0.5).restart();
 
         const zoomHandler = d3.zoom().on('zoom', (event) => {
             // Apply transformations to the entire graph (nodes, links, etc.)
@@ -141,22 +184,25 @@ const ForceGraph = () => {
             // Add a node to the data set so it shows up on the Force Graph 
 
             let lastNode = data["nodes"].slice(-1)[0];
-            lastNode.current = false; // set the previous current node to false, as we are adding a new currrent
+            lastNode.current = false // set the previous current node to false, as we are adding a new currrent
 
-            const newState = [...data.nodes.slice(0, -1), lastNode, {"id": word, "text": lastLetter, "group": word, "current": true, "endOfWord": false}];
-            const copiedState = [...newState];
+            const newState = [...data.nodes, {"id": word, "text": lastLetter, "group": word, "current": true, "endOfWord": false}];
+
+            let newLinks; 
+            if (word.length === 1) {
+                newLinks = data.links;
+            } else {
+                newLinks = [...data.links, {"source": word, "target": word.slice(0, -1)}]
+            }
             setData(
                 {
-                    "nodes": copiedState, 
-                    "links": [...data.links, {"source": word, "target": word.slice(0, -1)}]}
+                    "nodes": newState, 
+                    "links": newLinks}
                 ); 
 
         } else {
             // Letters already exist in the node. We still want to highlight though, so mark the node as current
-
-            // todo: VERY SLOW. OPTIMIZE. This is doing a list lookup every time, can be more optimal. 
             let wordNode = data.nodes.filter(n => n.id === word)[0];
-
             wordNode.current = true;
 
             setData(
