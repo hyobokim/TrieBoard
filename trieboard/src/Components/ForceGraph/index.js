@@ -2,16 +2,7 @@ import React, {Component, useEffect, useRef, useState} from "react";
 import TypeInput from "../TypeInput";
 import Trie from "../prefixTree";
 import * as d3 from "d3";
-
-/**
- * Defining node types. Start nodes are the first letters in a word, end are the last letters, and middle
- * are every node in between 
- */
-const NodeTypes = {
-    Start: "start",
-    End: "end",
-    Middle: "middle"
-}
+import { NodeTypes, letterToColors } from "../types";
 
 const ForceGraph = () => {
     var margin = {top: 0, right: 5, bottom: 70, left: 100},
@@ -20,37 +11,7 @@ const ForceGraph = () => {
         node_radius = 30,
         text_size = "2em";
     
-    const letterColors = {
-        // o and x and y are similar
-        // q and z are similar 
-        '': '#008080',
-        'a': '#FF0000',
-        'b': "#FF7F00",
-        'c': '#FFD400',
-        'd': "#FFFF00",
-        'e': '#BFFF00',
-        'f': "#6AFF00",
-        'g': '#00EAFF',
-        'h': "#0095FF",
-        'i': '#0040FF',
-        'j': "#AA00FF",
-        'k': '#FF00AA',
-        'l': "#EDB9B9",
-        'm': '#ff00ff',
-        'n': "#B9EDE0",  // these next two are very similar, maybe change?
-        'o': '#B9D7ED',
-        'p': "#DCB9ED",
-        'q': '#8F2323',
-        'r': "#8F6A23",
-        's': '#4F8F23',
-        't': "#23628F",
-        'u': '#6B238F',
-        'v': "#2F4F4F",
-        'w': '#737373',
-        'x': "#CCCCCC",
-        'y': '#E7E9B9',
-        'z': "#8b4513",
-    }
+
     const [data, setData] = useState(
         // Data is ordered sequentially, i.e. most recent data is at the end of list 
         {
@@ -98,7 +59,7 @@ const ForceGraph = () => {
 
         // Style the circles  
         svg.selectAll(circleSelector)
-        .style("fill",  d => letterColors[d.id.slice(0, 1)])
+        .style("fill",  d => letterToColors[d.id.slice(0, 1)])
         .style("stroke", d => d.current ? "yellow" : d.position === NodeTypes.Start ? "orange" : "black")
         .style("stroke-width", d => (d.position === NodeTypes.Middle && !d.current) ? "0" : "5");
         node.append("title").text(d => d.id);
