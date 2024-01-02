@@ -3,14 +3,26 @@ import TypeInput from "../TypeInput";
 import Trie from "../prefixTree";
 import * as d3 from "d3";
 
+/**
+ * Defining node types. Start nodes are the first letters in a word, end are the last letters, and middle
+ * are every node in between 
+ */
+const NodeTypes = {
+    Start: "start",
+    End: "end",
+    Middle: "middle"
+}
+
 const ForceGraph = () => {
-    var margin = {top: 0, right: 5, bottom: 40, left: 100},
+    var margin = {top: 0, right: 5, bottom: 70, left: 100},
         width = window.innerWidth - margin.left - margin.right,
         height = window.innerHeight -margin.top - margin.bottom,
         node_radius = 30,
         text_size = "2em";
     
     const letterColors = {
+        // o and x and y are similar
+        // q and z are similar 
         '': '#008080',
         'a': '#FF0000',
         'b': "#FF7F00",
@@ -33,7 +45,7 @@ const ForceGraph = () => {
         's': '#4F8F23',
         't': "#23628F",
         'u': '#6B238F',
-        'v': "#000000",
+        'v': "#2F4F4F",
         'w': '#737373',
         'x': "#CCCCCC",
         'y': '#E7E9B9',
@@ -42,7 +54,7 @@ const ForceGraph = () => {
     const [data, setData] = useState(
         // Data is ordered sequentially, i.e. most recent data is at the end of list 
         {
-            "nodes": [{"id": "", "text": "", "group": "", "current": false, "endOfWord": false}],
+            "nodes": [{"id": "", "text": "", "group": "", "current": false, "endOfWord": false, "position": NodeTypes.Middle}],
             "links": []
         }
         );
@@ -76,17 +88,19 @@ const ForceGraph = () => {
         // add the text
         const nodeText = enteredNodeTextGroup
         .append("text")
-        .text(d => d.text)
+        .text(d => d.position === NodeTypes.Start ? d.text.toUpperCase() :  d.text)
         .attr("font-size", text_size)
         .style("dominant-baseline", "middle") // vertical alignment
         .style("text-anchor", "middle")       // horizontal alignment
 
+        // Select last two nodes to update
         const circleSelector = data.nodes.length > 2 ? `#${data.nodes.slice(-1)[0].id}, #${data.nodes.slice(-2)[0].id}` : "circle"
+
         // Style the circles  
         svg.selectAll(circleSelector)
         .style("fill",  d => letterColors[d.id.slice(0, 1)])
-        .style("stroke", d => d.current ? "yellow" : "black")
-        .style("stroke-width", "5");
+        .style("stroke", d => d.current ? "yellow" : d.position === NodeTypes.Start ? "orange" : "black")
+        .style("stroke-width", d => (d.position === NodeTypes.Middle && !d.current) ? "0" : "5");
         node.append("title").text(d => d.id);
 
         let link = svg.selectAll("line")
@@ -97,14 +111,12 @@ const ForceGraph = () => {
         .append("line")
         .attr("stroke", "#999")
         .attr("stroke-opacity", 0.6)
+        .attr("stroke-width", "0.2em")
         .merge(link);
 
         const simulation = d3.forceSimulation(nodes)  // S3 simulation to apply forces between nodes in the graph 
         .force("link", d3.forceLink(links).id(d => d.id))
         .force("charge", d3.forceManyBody().strength(-200))
-        // .force("x", d3.forceX())
-        // .force("y", d3.forceY())
-        // .force("center", d3.forceCenter(width / 2, height / 2))
         .force("collide", d3.forceCollide(50))
         .on("tick", ticked); 
 
@@ -112,7 +124,7 @@ const ForceGraph = () => {
             simulation.force("center", d3.forceCenter(width / 2, height / 2));
         } else {
             simulation
-            // .force("center", d3.forceCenter().strength(0))
+            .force("center", d3.forceCenter().strength(0))
             .force("x", d3.forceX(width / 2))
             .force("y", d3.forceY(height / 2));
         }
@@ -168,9 +180,7 @@ const ForceGraph = () => {
         
         // Apply the zoom behavior to the SVG
         svg.call(zoomHandler);
-        // nodeTextGroup.call(zoomHandler);
         svg.call(zoomHandler.transform, prevZoom);
-
     }, [data])
 
     function addCurrentWordToGraph(word) {
@@ -182,17 +192,15 @@ const ForceGraph = () => {
         if (!(trie.hasSequence(word))) {
             // If the letters so far dont exist in the trie, create new nodes 
             // Add a node to the data set so it shows up on the Force Graph 
-
-            let lastNode = data["nodes"].slice(-1)[0];
-            lastNode.current = false // set the previous current node to false, as we are adding a new currrent
-
             const newState = [...data.nodes, {"id": word, "text": lastLetter, "group": word, "current": true, "endOfWord": false}];
 
             let newLinks; 
             if (word.length === 1) {
                 newLinks = data.links;
+                newState.slice(-1)[0].position = NodeTypes.Start;
             } else {
                 newLinks = [...data.links, {"source": word, "target": word.slice(0, -1)}]
+                newState.slice(-1)[0].position = NodeTypes.Middle;
             }
             setData(
                 {
@@ -225,6 +233,7 @@ const ForceGraph = () => {
         let lastNode = data["nodes"].slice(-1)[0];
         lastNode.endOfWord = true;
         lastNode.current = false;
+        lastNode.position = NodeTypes.End;
 
         setData(
             {

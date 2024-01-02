@@ -1,4 +1,5 @@
 import { useState } from "react";
+import './index.css'
 
 const TypeInput = (props) => {
     const [inputValue, setInputValue] = useState('');
@@ -19,7 +20,7 @@ const TypeInput = (props) => {
     }
 
     return <span>
-        <input value={inputValue} type="text" onChange={(e) => updateInput(e)}/>
+        <input className="type-input" value={inputValue} type="text" placeholder="Start typing..." autoFocus onChange={(e) => updateInput(e)}/>
     </span>
 };
 
